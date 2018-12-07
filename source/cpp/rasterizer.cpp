@@ -6,7 +6,9 @@
 #include "hw2_math_ops.h"
 #include "hw2_file_ops.h"
 #include <iostream>
+#include <algorithm>
 
+using namespace std;
 
 Camera cameras[100];
 int numberOfCameras = 0;
@@ -70,48 +72,92 @@ void printMatrix(double m[4][4]) {
 	}
 }
 
-void makeTranslationMatrix(Translation t, double m[4][4]) {
-	for(int i = 0; i < 4; i++) {
-		for(int j = 0; j < 4; j++) {
-			if (i == j) {
-				m[i][j] = 1.0;
-			}
-			else {
-				m[i][j] = 0.0;
-			}
-		}
-	}
-	m[0][3] = t.tx;
-	m[1][3] = t.ty;
-	m[2][3] = t.tz;
+void TranslationMatrix(Translation t, double matrix[4][4]) {
+	matrix[0][0] = 1;    matrix[0][1] = 0;    matrix[0][2] = 0;    matrix[0][3] = t.tx;    		
+	matrix[1][0] = 0;    matrix[1][1] = 1;    matrix[1][2] = 0;    matrix[1][3] = t.ty;
+	matrix[2][0] = 0;    matrix[2][1] = 0;    matrix[2][2] = 1;    matrix[2][3] = t.tz;
+	matrix[3][0] = 0;    matrix[3][1] = 0;    matrix[3][2] = 0;    matrix[3][3] = 1;
 }
 
+void RotationMatrix(Rotation r, double matrix[4][4]) {
+	double uvals[3];
+	double vvals[3];
+	Vec3 u;					// 
+	Vec3 v;					//
+	Vec3 w;					// 
+	double M[4][4];			// Orthonormal matrix uvw
+	double Rx_theta[4][4];	// Rotation around x axis
 
-void makeRotationMatrix(Rotation r, double m[4][4]) {
-	double 
-
-	Vec3 u;
 	u.x = r.ux;
 	u.y = r.uy;
 	u.z = r.uz;
-	u = normalizeVec3(u); 
-	// u = (ux, uy, uz). To find v, find the smallest absolute value in u. Make it 0, swap resting two and make one of them negative
-	Vec3 v; 
+	u = normalizeVec3(u)
 
+	uvals[0] = u.x;
+	uvals[1] = u.y;
+	uvals[2] = u.z;
 
+	int smallestIdx = 0;
+	int smallest    = ABS(uvals[0]);
+	for(int i = 1; i < 3; i++) {
+		if (ABS(uvals[i]) < smallest) {
+			smallest = ABS(uvals[i]);
+			smallestIdx = i;
+		}
+	}
 
+	if(smallestIdx == 0) {
+		vvals[0] = 0;
+		vvals[1] = -1 * uvals[2];
+		vvals[2] = uvals[1];
+	}
+	else if(smallestIdx == 1) {
+		vvals[0] = -1 * uvals[2];
+		vvals[1] = 0;
+		vvals[2] = uvals[0];
+	}
+	else {
+		vvals[0] = -1 * uvals[1];
+		vvals[1] = uvals[0];
+		vvals[2] = 0;
+	}
 
-	//double angle, ux, uy, uz;
-	typedef struct {
-    double x, y, z;
-    int colorId;
-} Vec3;
+	v.x = vvals[0];
+	v.y = vvals[1];
+	v.z = vvals[2];
+	v = normalizeVec3(v);
 
+	w = crossProductVec3(u, v);
+	w = normalizeVec3(w);
 
+	M[0][0] = u.x;    M[0][1] = u.y;    M[0][2] = u.z;    M[0][3] = 0;	
+	M[1][0] = v.x;    M[1][1] = v.y;    M[1][2] = v.z;    M[1][3] = 0;
+	M[2][0] = w.x;    M[2][1] = w.y;    M[2][2] = w.z;    M[2][3] = 0;
+	M[3][0] = 0;      M[3][1] = 0;      M[3][2] = 0;      M[3][3] = 1;
 
-
-
+	Rx_theta[0][0] = 1;               Rx_theta[0][1] = 0;               Rx_theta[0][2] = 0;               Rx_theta[0][3] = 0;
+	Rx_theta[1][0] = 0;               Rx_theta[1][1] = cos(r.angle);    Rx_theta[1][2] = -1*sin(r.angle); Rx_theta[1][3] = 0;
+	Rx_theta[2][0] = 0;               Rx_theta[2][1] = sin(r.angle);    Rx_theta[2][2] = cos(r.angle);    Rx_theta[2][3] = 0;
+	Rx_theta[3][0] = 0;               Rx_theta[3][1] = 0;               Rx_theta[3][2] = 0;               Rx_theta[3][3] = 1;
+	
+	// Rotate = Rx_theta * M
+	multiplyMatrixWithMatrix(matrix, Rx_theta, M);
 }
+
+void ScalingMatrix(Scaling s, double matrix[4][4]) {
+	matrix[0][0] = s.sx;	matrix[0][1] = 0;    matrix[0][2] = 0;    matrix[0][3] = 0;
+	matrix[1][0] = 0;		matrix[1][1] = s.sy; matrix[1][2] = 0;	  matrix[1][3] = 0;	
+	matrix[2][0] = 0;		matrix[2][1] = 0;	 matrix[2][2] = s.sz; matrix[2][3] = 0;
+	matrix[3][0] = 0; 		matrix[3][1] = 0;	 matrix[3][2] = 0;	  matrix[3][3] = 1;
+}
+
+void ViewportTransform()
+
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+
+
 
 void forwardRenderingPipeline(Camera cam) {
     // TODO: IMPLEMENT HERE
