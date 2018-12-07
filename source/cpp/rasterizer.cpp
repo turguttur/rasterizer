@@ -10,6 +10,9 @@
 
 using namespace std;
 
+using namespace std;
+
+
 Camera cameras[100];
 int numberOfCameras = 0;
 
@@ -156,6 +159,62 @@ void ViewportTransform()
 // ##########################################################################################################################################
 // ##########################################################################################################################################
 // ##########################################################################################################################################
+
+
+void makeCameraTransformation(Camera c, double m[4][4]) {
+
+    //create an identity matrix
+    double I[4][4];
+    makeIdentityMatrix(I);
+
+    //identity matrix to translation matrix
+    Translation t;
+    t.tx = c.pos.x;
+    t.ty = c.pos.y;
+    t.tz = c.pos.z;
+    makeTranslationMatrix(t, I);
+
+    double translated[4][4];
+
+    //translation to the point
+    multiplyMatrixWithMatrix(translated, I, m);
+
+    //create an identity matrix for rotation
+    makeIdentityMatrix(I);
+
+    //create rotation matrix
+    I[0][0] = c.u.x;    I[0][1] = c.u.y;    I[0][2] = c.u.z;    I[0][3] = 0;
+    I[1][0] = c.v.x;    I[1][1] = c.v.y;    I[1][2] = c.v.z;    I[1][3] = 0;
+    I[2][0] = c.w.x;    I[2][1] = c.w.y;    I[2][2] = c.w.z;    I[2][3] = 0;
+    I[3][0] = 0;        I[3][1] = 0;        I[3][2] = 0;        I[3][3] = 1;
+
+    double rotated[4][4];
+
+    multiplyMatrixWithMatrix(rotated, I, translated);
+
+    m = rotated;
+
+}
+
+
+void makePerspectiveTransformation(Camera c, double m[4][4]) {
+
+    //create an identity matrix
+    double I[4][4];
+    makeIdentityMatrix(I);
+
+
+    I[0][0] = 2 * (c.n) / (c.r-c.l);    I[0][1] = 0;                        I[0][2] = (c.r + c.l) / (c.r - c.l);            I[0][3] = 0;
+    I[1][0] = 0;                        I[1][1] = 2 * (c.n) / (c.t-c.b);    I[1][2] = (c.t + c.b) / (c.t - c.b);            I[1][3] = 0;
+    I[2][0] = 0;                        I[2][1] = 0;                        I[2][2] = (-1) * (c.f + c.n) / (c.f - c.n);     I[2][3] = (-1) * (2*c.f*c.n) / (c.f - c.n);
+    I[3][0] = 0;                        I[3][1] = 0;                        I[3][2] = -1;                                   I[3][3] = 0;
+
+
+    double result[4][4];
+
+    multiplyMatrixWithMatrix(result, I, m);
+
+    m = result;
 
 
 
