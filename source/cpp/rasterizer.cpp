@@ -58,6 +58,61 @@ void initializeImage(Camera cam) {
 	You can define helper functions inside this file (rasterizer.cpp) only.
 	Using types in "hw2_types.h" and functions in "hw2_math_ops.cpp" will speed you up while working.
 */
+
+// My Funtions:
+void printMatrix(double m[4][4]) {
+	for(int i = 0; i < 4; i++) {
+		cout << "[";
+		for(int j = 0; j < 4; j++) {
+			cout << m[i][j] << " ";
+		}
+		cout << "]\n";
+	}
+}
+
+void makeTranslationMatrix(Translation t, double m[4][4]) {
+	for(int i = 0; i < 4; i++) {
+		for(int j = 0; j < 4; j++) {
+			if (i == j) {
+				m[i][j] = 1.0;
+			}
+			else {
+				m[i][j] = 0.0;
+			}
+		}
+	}
+	m[0][3] = t.tx;
+	m[1][3] = t.ty;
+	m[2][3] = t.tz;
+}
+
+
+void makeRotationMatrix(Rotation r, double m[4][4]) {
+	double 
+
+	Vec3 u;
+	u.x = r.ux;
+	u.y = r.uy;
+	u.z = r.uz;
+	u = normalizeVec3(u); 
+	// u = (ux, uy, uz). To find v, find the smallest absolute value in u. Make it 0, swap resting two and make one of them negative
+	Vec3 v; 
+
+
+
+
+	//double angle, ux, uy, uz;
+	typedef struct {
+    double x, y, z;
+    int colorId;
+} Vec3;
+
+
+
+
+
+}
+
 void forwardRenderingPipeline(Camera cam) {
     // TODO: IMPLEMENT HERE
 }
