@@ -110,6 +110,7 @@ void _multiplyMatrixWithMatrix(double r[4][4], double m1[4][4], double m2[4][4])
 	}
 }
 
+// It can multiply v = M * v
 void _multiplyMatrixWithVec4d(double r[4], double m[4][4], double v[4]) {
 	int i, j;
 	double total;
@@ -128,10 +129,25 @@ void _multiplyMatrixWithVec4d(double r[4], double m[4][4], double v[4]) {
 
 // Model Transformation for Translation
 void ModelTransformationMatrix(Translation t, double matrix[4][4]) {
-	matrix[0][0] = 1;    matrix[0][1] = 0;    matrix[0][2] = 0;    matrix[0][3] = t.tx;    		
-	matrix[1][0] = 0;    matrix[1][1] = 1;    matrix[1][2] = 0;    matrix[1][3] = t.ty;
-	matrix[2][0] = 0;    matrix[2][1] = 0;    matrix[2][2] = 1;    matrix[2][3] = t.tz;
-	matrix[3][0] = 0;    matrix[3][1] = 0;    matrix[3][2] = 0;    matrix[3][3] = 1;
+	matrix[0][0] = 1;
+	matrix[0][1] = 0;
+	matrix[0][2] = 0;
+	matrix[0][3] = t.tx;    		
+
+	matrix[1][0] = 0;    
+	matrix[1][1] = 1;    
+	matrix[1][2] = 0;    
+	matrix[1][3] = t.ty;
+
+	matrix[2][0] = 0;    
+	matrix[2][1] = 0;    
+	matrix[2][2] = 1;    
+	matrix[2][3] = t.tz;
+
+	matrix[3][0] = 0;    
+	matrix[3][1] = 0;    
+	matrix[3][2] = 0;    
+	matrix[3][3] = 1;
 }
 
 // Model Transformation for Rotation
@@ -141,7 +157,8 @@ void ModelTransformationMatrix(Rotation r, double matrix[4][4]) {
 	Vec3 u;					// 
 	Vec3 v;					//
 	Vec3 w;					// 
-	double M[4][4];			// Orthonormal matrix uvw
+	double M[4][4];			// Orthonormal matrix uvw: M
+	double _M[4][4];		// Inverse of M
 	double Rx_theta[4][4];	// Rotation around x axis
 
 	u.x = r.ux;
@@ -154,7 +171,7 @@ void ModelTransformationMatrix(Rotation r, double matrix[4][4]) {
 	uvals[2] = u.z;
 
 	int smallestIdx = 0;
-	int smallest    = abs(uvals[0]);
+	double smallest = abs(uvals[0]);
 	for(int i = 1; i < 3; i++) {
 		if (abs(uvals[i]) < smallest) {
 			smallest = abs(uvals[i]);
@@ -186,18 +203,24 @@ void ModelTransformationMatrix(Rotation r, double matrix[4][4]) {
 	w = crossProductVec3(u, v);
 	w = normalizeVec3(w);
 
+	_M[0][0] = u.x;    _M[0][1] = v.x;    _M[0][2] = w.x;    _M[0][3] = 0;	
+	_M[1][0] = u.y;    _M[1][1] = v.y;    _M[1][2] = w.y;    _M[1][3] = 0;
+	_M[2][0] = u.z;    _M[2][1] = v.z;    _M[2][2] = w.z;    _M[2][3] = 0;
+	_M[3][0] = 0;      _M[3][1] = 0;      _M[3][2] = 0;      _M[3][3] = 1;	
+
 	M[0][0] = u.x;    M[0][1] = u.y;    M[0][2] = u.z;    M[0][3] = 0;	
 	M[1][0] = v.x;    M[1][1] = v.y;    M[1][2] = v.z;    M[1][3] = 0;
 	M[2][0] = w.x;    M[2][1] = w.y;    M[2][2] = w.z;    M[2][3] = 0;
 	M[3][0] = 0;      M[3][1] = 0;      M[3][2] = 0;      M[3][3] = 1;
 
 	Rx_theta[0][0] = 1;               Rx_theta[0][1] = 0;               			 Rx_theta[0][2] = 0;               					Rx_theta[0][3] = 0;
-	Rx_theta[1][0] = 0;               Rx_theta[1][1] = cos(r.angle*(M_PI / 180));    Rx_theta[1][2] = -1*sin(r.angle*(M_PI / 180)); 	Rx_theta[1][3] = 0;
+	Rx_theta[1][0] = 0;               Rx_theta[1][1] = cos(r.angle*(M_PI / 180));    Rx_theta[1][2] = -sin(r.angle*(M_PI / 180)); 	    Rx_theta[1][3] = 0;
 	Rx_theta[2][0] = 0;               Rx_theta[2][1] = sin(r.angle*(M_PI / 180));    Rx_theta[2][2] = cos(r.angle*(M_PI / 180));    	Rx_theta[2][3] = 0;
 	Rx_theta[3][0] = 0;               Rx_theta[3][1] = 0;               			 Rx_theta[3][2] = 0;               					Rx_theta[3][3] = 1;
 
-	// Rotate = Rx_theta * M
-	multiplyMatrixWithMatrix(matrix, Rx_theta, M);
+	// Rotate = (M' * Rx_theta * M)
+	_multiplyMatrixWithMatrix(matrix, Rx_theta, M);
+	_multiplyMatrixWithMatrix(matrix, _M, matrix);
 }
 
 // Model Transformation for Scaling
@@ -216,17 +239,47 @@ void CameraTransformationMatrix(Camera c, double M_cam[4][4]) {
 }
 
 void PerspectiveTransformationMatrix(Camera c, double M_per[4][4]) {
-	M_per[0][0] = 2 * (c.n) / (c.r-c.l);    M_per[0][1] = 0;                        M_per[0][2] = (c.r + c.l) / (c.r - c.l);            M_per[0][3] = 0;
-    M_per[1][0] = 0;                        M_per[1][1] = 2 * (c.n) / (c.t-c.b);    M_per[1][2] = (c.t + c.b) / (c.t - c.b);            M_per[1][3] = 0;
-    M_per[2][0] = 0;                        M_per[2][1] = 0;                        M_per[2][2] = (-1) * (c.f + c.n) / (c.f - c.n);     M_per[2][3] = (-1) * (2*c.f*c.n) / (c.f - c.n);
-    M_per[3][0] = 0;                        M_per[3][1] = 0;                        M_per[3][2] = -1;                                   M_per[3][3] = 0;
+	M_per[0][0] = (2.0d * c.n) / (c.r-c.l);    
+	M_per[0][1] = 0;                        
+	M_per[0][2] = (c.r + c.l) / (c.r - c.l);            
+	M_per[0][3] = 0;
+
+    M_per[1][0] = 0;                        
+    M_per[1][1] = (2.0d * c.n) / (c.t-c.b);    
+    M_per[1][2] = (c.t + c.b) / (c.t - c.b);            
+    M_per[1][3] = 0;
+
+    M_per[2][0] = 0;                        
+    M_per[2][1] = 0;                        
+    M_per[2][2] = -((c.f + c.n) / (c.f - c.n));     
+    M_per[2][3] = -((2.0d * c.f * c.n) / (c.f - c.n));
+
+    M_per[3][0] = 0;                        
+    M_per[3][1] = 0;                        
+    M_per[3][2] = -1.0d;                                   
+    M_per[3][3] = 0;
 }
 
 void ViewportTransformMatrix(Camera c, double M_vp[4][4]) {
-	M_vp[0][0] = c.sizeX / 2; M_vp[0][1] = 0;               M_vp[0][2] = 0;       M_vp[0][3] = (c.sizeX-1) / 2;
-    M_vp[1][0] = 0;           M_vp[1][1] = c.sizeY / 2;     M_vp[1][2] = 0;       M_vp[1][3] = (c.sizeY-1) / 2; 
-    M_vp[2][0] = 0;           M_vp[2][1] = 0;               M_vp[2][2] = 1/2;     M_vp[2][3] = 1/2;
-    M_vp[3][0] = 0;           M_vp[3][1] = 0;               M_vp[3][2] = 0;       M_vp[3][3] = 1;
+	M_vp[0][0] = double(c.sizeX) / 2.0d; 
+	M_vp[0][1] = 0;               
+	M_vp[0][2] = 0;       
+	M_vp[0][3] = double(c.sizeX-1) / 2.0d;
+
+    M_vp[1][0] = 0;           
+    M_vp[1][1] = double(c.sizeY) / 2.0d;     
+    M_vp[1][2] = 0;       
+    M_vp[1][3] = double(c.sizeY-1) / 2.0d; 
+
+    M_vp[2][0] = 0;           
+    M_vp[2][1] = 0;               
+    M_vp[2][2] = 1.0d/2.0d;     
+    M_vp[2][3] = 1.0d/2.0d;
+
+    M_vp[3][0] = 0;           
+    M_vp[3][1] = 0;               
+    M_vp[3][2] = 0;       
+    M_vp[3][3] = 1;
 }
 
 void PerspectiveDivide(double v[4]) {
@@ -247,6 +300,13 @@ void EqualizeMatrix(double src[4][4], double dst[4][4]) {
 // ##########################################################################################################################################
 // ##########################################################################################################################################
 // ##########################################################################################################################################
+
+// 2.0d yerine double() kullanulabilir
+
+// The midpoint algorithm
+void DrawLine() {
+
+}
 
 void forwardRenderingPipeline(Camera cam) {	 
     // TODO: IMPLEMENT HERE
@@ -280,15 +340,17 @@ void forwardRenderingPipeline(Camera cam) {
     	}	
     	// Total Transformations is equal Model Transformations now
     	EqualizeMatrix(M_model, M_total);
+    	//printMatrix(M_model);
 
     	// Camera transformations M_total = M_cam * M_total
     	CameraTransformationMatrix(cam, M_cam);
     	_multiplyMatrixWithMatrix(M_total, M_cam, M_total);
+    	
 
     	// Perspective transformations M_total = M_per * M_total
     	PerspectiveTransformationMatrix(cam, M_per);
     	_multiplyMatrixWithMatrix(M_total, M_per, M_total);
-
+    	printMatrix(M_total);
     	
     	for(int k = 0; k < model.numberOfTriangles; k++) {
     		Triangle triangle = model.triangles[k];		// Actual triangle without transformed
@@ -304,7 +366,13 @@ void forwardRenderingPipeline(Camera cam) {
     			// Transform this vertex point to transformed points 
     			transformedTriangle.t_vertices[l].colorId = vertices[triangle.vertexIds[l]].colorId;
     			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[l].t_points, M_total, v);
+    			//cout << transformedTriangle.t_vertices[l].t_points[0] << " " << transformedTriangle.t_vertices[l].t_points[1] << " " << transformedTriangle.t_vertices[l].t_points[2] << " "
+    			//<< transformedTriangle.t_vertices[l].t_points[3] << endl;
+
     			PerspectiveDivide(transformedTriangle.t_vertices[l].t_points);	// Perform perspective divide to transformed points
+    			//cout << transformedTriangle.t_vertices[l].t_points[0] << " " << transformedTriangle.t_vertices[l].t_points[1] << " " << transformedTriangle.t_vertices[l].t_points[2] << " "
+    			//<< transformedTriangle.t_vertices[l].t_points[3] << endl;
+    			//cout << "**********************************************************************" << endl;
     		}
     		transformedTriangles.push_back(transformedTriangle);
     	}
@@ -314,8 +382,13 @@ void forwardRenderingPipeline(Camera cam) {
     	for(int k = 0; k < transformedTriangles.size(); k++) {
     		for(int l = 0; l < 3; l++) {
     			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << " ";
+    			cout << transformedTriangles[k].t_vertices[l].t_points[0] << " " << transformedTriangles[k].t_vertices[l].t_points[1] << " " << transformedTriangles[k].t_vertices[l].t_points[2] << " "
+    			<< transformedTriangles[k].t_vertices[l].t_points[3] << endl;
     			_multiplyMatrixWithVec4d(transformedTriangles[k].t_vertices[l].t_points, M_vp, transformedTriangles[k].t_vertices[l].t_points);
     			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << endl;
+    			cout << transformedTriangles[k].t_vertices[l].t_points[0] << " " << transformedTriangles[k].t_vertices[l].t_points[1] << " " << transformedTriangles[k].t_vertices[l].t_points[2] << " "
+    			<< transformedTriangles[k].t_vertices[l].t_points[3] << endl;
+    			cout << "**********************************************************************" << endl;
     		}
     	}
     }
