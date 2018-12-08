@@ -11,8 +11,6 @@
 
 using namespace std;
 
-using namespace std;
-
 
 Camera cameras[100];
 int numberOfCameras = 0;
@@ -42,6 +40,10 @@ int backfaceCullingSetting = 0;
 
 Color **image;
 
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// Structures that I defined
+
 struct TransformedVertex {
 	double t_points[4];	// transformed points = [x, y, z, w]
 	int colorId;
@@ -50,6 +52,9 @@ struct TransformedVertex {
 struct TransformedTriangle {
 	TransformedVertex t_vertices[3];
 };
+
+// ---------------------------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------------------------
 
 /*
 	Initializes image with background color
@@ -119,85 +124,6 @@ void _multiplyMatrixWithVec4d(double r[4], double m[4][4], double v[4]) {
 	// At the end equalize result to r matrix
 	for(i = 0; i < 4; i++)
 		r[i] = result[i];
-}
-
-void TranslationMatrix(Translation t, double matrix[4][4]) {
-	matrix[0][0] = 1;    matrix[0][1] = 0;    matrix[0][2] = 0;    matrix[0][3] = t.tx;    		
-	matrix[1][0] = 0;    matrix[1][1] = 1;    matrix[1][2] = 0;    matrix[1][3] = t.ty;
-	matrix[2][0] = 0;    matrix[2][1] = 0;    matrix[2][2] = 1;    matrix[2][3] = t.tz;
-	matrix[3][0] = 0;    matrix[3][1] = 0;    matrix[3][2] = 0;    matrix[3][3] = 1;
-}
-
-void RotationMatrix(Rotation r, double matrix[4][4]) {
-	double uvals[3];
-	double vvals[3];
-	Vec3 u;					// 
-	Vec3 v;					//
-	Vec3 w;					// 
-	double M[4][4];			// Orthonormal matrix uvw
-	double Rx_theta[4][4];	// Rotation around x axis
-
-	u.x = r.ux;
-	u.y = r.uy;
-	u.z = r.uz;
-	u = normalizeVec3(u);
-
-	uvals[0] = u.x;
-	uvals[1] = u.y;
-	uvals[2] = u.z;
-
-	int smallestIdx = 0;
-	int smallest    = abs(uvals[0]);
-	for(int i = 1; i < 3; i++) {
-		if (abs(uvals[i]) < smallest) {
-			smallest = abs(uvals[i]);
-			smallestIdx = i;
-		}
-	}
-
-	if(smallestIdx == 0) {
-		vvals[0] = 0;
-		vvals[1] = -1 * uvals[2];
-		vvals[2] = uvals[1];
-	}
-	else if(smallestIdx == 1) {
-		vvals[0] = -1 * uvals[2];
-		vvals[1] = 0;
-		vvals[2] = uvals[0];
-	}
-	else {
-		vvals[0] = -1 * uvals[1];
-		vvals[1] = uvals[0];
-		vvals[2] = 0;
-	}
-
-	v.x = vvals[0];
-	v.y = vvals[1];
-	v.z = vvals[2];
-	v = normalizeVec3(v);
-
-	w = crossProductVec3(u, v);
-	w = normalizeVec3(w);
-
-	M[0][0] = u.x;    M[0][1] = u.y;    M[0][2] = u.z;    M[0][3] = 0;	
-	M[1][0] = v.x;    M[1][1] = v.y;    M[1][2] = v.z;    M[1][3] = 0;
-	M[2][0] = w.x;    M[2][1] = w.y;    M[2][2] = w.z;    M[2][3] = 0;
-	M[3][0] = 0;      M[3][1] = 0;      M[3][2] = 0;      M[3][3] = 1;
-
-	Rx_theta[0][0] = 1;               Rx_theta[0][1] = 0;               			 Rx_theta[0][2] = 0;               					Rx_theta[0][3] = 0;
-	Rx_theta[1][0] = 0;               Rx_theta[1][1] = cos(r.angle*(M_PI / 180));    Rx_theta[1][2] = -1*sin(r.angle*(M_PI / 180)); 	Rx_theta[1][3] = 0;
-	Rx_theta[2][0] = 0;               Rx_theta[2][1] = sin(r.angle*(M_PI / 180));    Rx_theta[2][2] = cos(r.angle*(M_PI / 180));    	Rx_theta[2][3] = 0;
-	Rx_theta[3][0] = 0;               Rx_theta[3][1] = 0;               			 Rx_theta[3][2] = 0;               					Rx_theta[3][3] = 1;
-
-	// Rotate = Rx_theta * M
-	multiplyMatrixWithMatrix(matrix, Rx_theta, M);
-}
-
-void ScalingMatrix(Scaling s, double matrix[4][4]) {
-	matrix[0][0] = s.sx;	matrix[0][1] = 0;    matrix[0][2] = 0;    matrix[0][3] = 0;
-	matrix[1][0] = 0;		matrix[1][1] = s.sy; matrix[1][2] = 0;	  matrix[1][3] = 0;	
-	matrix[2][0] = 0;		matrix[2][1] = 0;	 matrix[2][2] = s.sz; matrix[2][3] = 0;
-	matrix[3][0] = 0; 		matrix[3][1] = 0;	 matrix[3][2] = 0;	  matrix[3][3] = 1;
 }
 
 // Model Transformation for Translation
@@ -285,8 +211,8 @@ void ModelTransformationMatrix(Scaling s, double matrix[4][4]) {
 void CameraTransformationMatrix(Camera c, double M_cam[4][4]) {
 	M_cam[0][0] = c.u.x;	M_cam[0][1] = c.u.y;	M_cam[0][2] = c.u.z;	M_cam[0][3] = -((c.u.x * c.pos.x) + (c.u.y * c.pos.y) + (c.u.z * c.pos.z));
 	M_cam[1][0] = c.v.x;	M_cam[1][1] = c.v.y;	M_cam[1][2] = c.v.z;	M_cam[1][3] = -((c.v.x * c.pos.x) + (c.v.y * c.pos.y) + (c.v.z * c.pos.z));
-	M_cam[2][0] = c.w.x;	M_cam[0][1] = c.w.y;	M_cam[0][2] = c.w.z;	M_cam[0][3] = -((c.w.x * c.pos.x) + (c.w.y * c.pos.y) + (c.w.z * c.pos.z));
-	M_cam[0][0] = 0;		M_cam[0][1] = 0;		M_cam[0][2] = 0;		M_cam[0][3] = 1;
+	M_cam[2][0] = c.w.x;	M_cam[2][1] = c.w.y;	M_cam[2][2] = c.w.z;	M_cam[2][3] = -((c.w.x * c.pos.x) + (c.w.y * c.pos.y) + (c.w.z * c.pos.z));
+	M_cam[3][0] = 0;		M_cam[3][1] = 0;		M_cam[3][2] = 0;		M_cam[3][3] = 1;
 }
 
 void PerspectiveTransformationMatrix(Camera c, double M_per[4][4]) {
@@ -373,11 +299,11 @@ void forwardRenderingPipeline(Camera cam) {
     			v[1] = vertices[triangle.vertexIds[l]].y;
     			v[2] = vertices[triangle.vertexIds[l]].z;
     			v[3] = 1;
-    			cout << "x: " << v[0] << ", y: " << v[1] << ", z: " << v[2] << ", w: " << v[3] << endl;
+    			//cout << "x: " << v[0] << ", y: " << v[1] << ", z: " << v[2] << ", w: " << v[3] << endl;
 
     			// Transform this vertex point to transformed points 
     			transformedTriangle.t_vertices[l].colorId = vertices[triangle.vertexIds[l]].colorId;
-    			multiplyMatrixWithVec4d(transformedTriangle.t_vertices[l].t_points, M_total, v);
+    			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[l].t_points, M_total, v);
     			PerspectiveDivide(transformedTriangle.t_vertices[l].t_points);	// Perform perspective divide to transformed points
     		}
     		transformedTriangles.push_back(transformedTriangle);
@@ -387,11 +313,21 @@ void forwardRenderingPipeline(Camera cam) {
     	// Perform viewport transformation against transformed vertex points
     	for(int k = 0; k < transformedTriangles.size(); k++) {
     		for(int l = 0; l < 3; l++) {
+    			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << " ";
     			_multiplyMatrixWithVec4d(transformedTriangles[k].t_vertices[l].t_points, M_vp, transformedTriangles[k].t_vertices[l].t_points);
+    			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << endl;
     		}
     	}
     }
 
+    for(int i = 0; i < transformedTriangles.size(); i++) {
+    	for(int j = 0; j < 3; j++) {
+    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].r = colors[transformedTriangles[i].t_vertices[j].colorId].r; 
+    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].g = colors[transformedTriangles[i].t_vertices[j].colorId].g;
+    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].b = colors[transformedTriangles[i].t_vertices[j].colorId].b;
+    	}
+    }	
+    
     for(int i = 0; i < transformedTriangles.size(); i++) {
     	cout << "Triangle: " << i+1 << endl;
     	for(int j = 0; j < 3; j++) {
@@ -405,7 +341,7 @@ void forwardRenderingPipeline(Camera cam) {
     	cout << "\n";
     }
     cout << "****************************************************************************" << endl;
-
+	
 }
 
 
