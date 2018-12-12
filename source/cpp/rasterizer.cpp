@@ -8,6 +8,7 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <limits>
 
 using namespace std;
 
@@ -297,126 +298,295 @@ void EqualizeMatrix(double src[4][4], double dst[4][4]) {
 	}
 }
 
+
+
 // ##########################################################################################################################################
 // ##########################################################################################################################################
 // ##########################################################################################################################################
 
 // 2.0d yerine double() kullanulabilir
 
-// The midpoint algorithm
-void DrawLine() {
+
+// f(x,y) = x(y0 - y1) + y(x1 - x0) + x0y1 - y0x1
+
+
+void draw(int x, int y, Color c) {
+	image[x][y].r = c.r;
+	image[x][y].g = c.g;
+	image[x][y].b = c.b;
+}
+
+void LineRasterization(double x0, double y0, double x1, double y1, Color c0, Color c1) {
+	int x, y;
+	bool flag = abs(y1 - y0) > abs(x1- x0);
+	if(flag) {
+		swap(x0, y0);
+		swap(x1, y1);
+	}
+	if(x0 > x1) {
+		swap(x0, x1);
+		swap(y0, y1);
+		swap(c0, c1);
+	}
+
+	int dx = (int)x1 - (int)x0;
+	int dy = abs((int)y1 - (int)y0);
+	int d  = -dy + 0.5*(dx);
+
+	Color c = c0;
+	double dc_r = (c1.r - c0.r) / (x1 - x0);
+	double dc_g = (c1.g - c0.g) / (x1 - x0);
+	double dc_b = (c1.b - c0.b) / (x1 - x0);
+
+	int ystep = (y0 < y1) ? 1 : -1;
+	y = (int)y0;
+	for(x = (int)x0; x <= (int)x1; x++) {
+		if(flag) {
+			draw(y, x, c);		
+		}
+		else {
+			draw(x, y, c);
+		}
+		if(d < 0) {
+			y += ystep;
+			d += (-dy + dx);
+		}
+		else {
+			d += (-dy);
+		}
+		c.r += dc_r;
+		c.g += dc_g;
+		c.b += dc_b;
+	}
+}
+
+
+void TriangleRasterization(std::pair<double, double> vertex[3], Color color[3]) {
+	// pairs first is x coordinate, and the second is y coordinate
+
+	// We need to find bounding box first
+	
+	double minx = std::numeric_limits<double>::max();
+	double miny = std::numeric_limits<double>::max();
+	double maxx = std::numeric_limits<double>::min();
+	double maxy = std::numeric_limits<double>::min();
+	for(int i = 0; i < 3; i++) {
+		if(vertex[i].first < minx)
+			minx = vertex[i].first;
+		if(vertex[i].second < miny) 
+			miny = vertex[i].second;
+		if(vertex[i].first > maxx) 
+			maxx = vertex[i].first;
+		if(vertex[i].second > maxy)
+			maxy = vertex[i].second;
+	}
+
+	/*
+	cout << "v0: (" << vertex[0].first << ", " << vertex[0].second << ")" << endl;
+	cout << "v1: (" << vertex[1].first << ", " << vertex[1].second << ")" << endl;
+	cout << "v2: (" << vertex[2].first << ", " << vertex[2].second << ")" << endl;
+	cout << "minx: " << minx << " maxx: " << maxx << " miny: " << miny << " maxy: " << maxy << endl; 
+	cout << "------------------------------------------------------------------------------------" << endl;
+	
+	double minx = min(vertex[0].first, vertex[1].first);
+	minx = min(minx, vertex[2].first);
+	double maxx = max(vertex[0].first, vertex[1].first);
+	maxx = max(maxx, vertex[2].first);
+	double miny = min(vertex[0].second, vertex[1].second);
+	miny = min(miny, vertex[2].second);
+	double maxy = max(vertex[0].second, vertex[1].second);
+	maxy = max(maxy, vertex[2].second);
+	*/
+	//cout << "xmin: " << minx << " xmax: " << maxx << " ymin: " << miny << " ymax: " << maxy << endl;
+ 	// DOUBLE İNT FALAN DÜZELT
+
+	double epsilon = 1e-10;
+	int x0 = int(vertex[0].first);
+	int y0 = int(vertex[0].second);
+	int x1 = int(vertex[1].first);
+	int y1 = int(vertex[1].second);
+	int x2 = int(vertex[2].first);
+	int y2 = int(vertex[2].second);
+	Color c0 = color[0];
+	Color c1 = color[1];
+	Color c2 = color[2];
+
+	double alpha, beta, gamma;
+	Color c;
+	for(int y = int(miny); y <= int(maxy); y++) {
+		for(int x = int(minx); x <= int(maxx); x++) {
+			//cout << "x: " << x << ", y: " << y << endl;
+			alpha = double((x*(y1-y2))+(y*(x2-x1))+(x1*y2)-(y1*x2)) /
+					double((x0*(y1-y2))+(y0*(x2-x1))+(x1*y2)-(y1*x2));
+			beta  = double((x*(y2-y0))+(y*(x0-x2))+(x2*y0)-(y2*x0)) /
+					double((x1*(y2-y0))+(y1*(x0-x2))+(x2*y0)-(y2*x0));
+			gamma = double((x*(y0-y1))+(y*(x1-x0))+(x0*y1)-(y0*x1)) /
+					double((x2*(y0-y1))+(y2*(x1-x0))+(x0*y1)-(y0*x1));
+			//cout << "bary start:" << endl,
+			//cout << alpha << " " <<  beta << " "  << gamma << endl;
+			//cout << "bary end" << endl;
+			if(alpha >= 0 && beta >= 0 && gamma >= 0) {
+				//cout << alpha << " -- " << beta << " -- " << gamma << endl;
+				c.r = (alpha * c0.r) + (beta * c1.r) + (gamma * c2.r);
+				c.g = (alpha * c0.g) + (beta * c1.g) + (gamma * c2.g);
+				c.b = (alpha * c0.b) + (beta * c1.b) + (gamma * c2.b);
+				draw(x, y, c);
+			}
+		}
+	}
+	// f01 = x(y0 - y1) + y(x1 - x0) + x0y1 - y0x1
+	// f12 = x(y1 - y2) + y(x2 - x1) + x1y2 - y1x2
+	// f20 = x(y2 - y1) + y(x0 - x2) + x2y0 - y2x0
+	// alpha = f12(x, y) / f12(x0, y0)
+	// beta  = f20(x, y) / f20(x1, y1)
+	// gamma = f01(x, y) / f01(x2, y2)
 
 }
 
 void forwardRenderingPipeline(Camera cam) {	 
     // TODO: IMPLEMENT HERE
-    Model model;
-    // Keep all transformed triangles
-    std::vector<TransformedTriangle> transformedTriangles;
+    Model model;    
     for(int i = 0; i < numberOfModels; i++) {
-    	model  = models[i];
-    	double M_model[4][4];			// Define M_model (model transformation matrix)
-    	double M_cam[4][4];				// Define M_cam (camera transformation matrix)
-    	double M_per[4][4];				// Define M_per (perspective transformation matrix)
-    	double M_vp[4][4];				// Define M_vp (viewport transformation matrix)
-    	double M_total[4][4];			// Total transformations
-    	makeIdentityMatrix(M_model);	// Define M_initally as identity matrix
-
+    	model = models[i];
+    	double M_model[4][4];			// Define M_model as model transformation matrix
+    	double M_cam[4][4];				// Define M_cam as camera transformation matrix
+    	double M_per[4][4]; 			// Define M_per as perspective transformation matrix
+    	double M_vp[4][4];				// Define M_vp as viewport transformation matrix
+    	double M_total[4][4]; 			// Define M_total to keep all transformations in single matrix
+    	makeIdentityMatrix(M_model);	// Initially define M_model as identity matrix
+    	
     	for(int j = 0; j < model.numberOfTransformations; j++) {
-    		double M[4][4];		// M_i: modelling transformations of each step
+    		double M[4][4];			// Define M as model transformation in each step
     		if(model.transformationTypes[j] == 't') {
+    			// Translation transform
     			Translation t = translations[model.transformationIDs[j]];
     			ModelTransformationMatrix(t, M);
     		}
     		else if(model.transformationTypes[j] == 'r') {
+    			// Rotation transformation
     			Rotation r = rotations[model.transformationIDs[j]];
     			ModelTransformationMatrix(r, M);
     		}
     		else if(model.transformationTypes[j] == 's') {
+    			// Scaling transformation
     			Scaling s = scalings[model.transformationIDs[j]];
     			ModelTransformationMatrix(s, M);
     		}
+    		// To find out final modelling transformation
     		_multiplyMatrixWithMatrix(M_model, M, M_model);
-    	}	
-    	// Total Transformations is equal Model Transformations now
+    	}
+    	// Equalize the model transformation to total transformation
     	EqualizeMatrix(M_model, M_total);
-    	//printMatrix(M_model);
 
-    	// Camera transformations M_total = M_cam * M_total
+    	// Find camera transformation matrix and multiply it with total transformation until now
     	CameraTransformationMatrix(cam, M_cam);
     	_multiplyMatrixWithMatrix(M_total, M_cam, M_total);
-    	
 
-    	// Perspective transformations M_total = M_per * M_total
+    	// Find perspective transformation matrix and multiply it with total transformation until now
     	PerspectiveTransformationMatrix(cam, M_per);
     	_multiplyMatrixWithMatrix(M_total, M_per, M_total);
-    	printMatrix(M_total);
-    	
-    	for(int k = 0; k < model.numberOfTriangles; k++) {
-    		Triangle triangle = model.triangles[k];		// Actual triangle without transformed
-    		TransformedTriangle transformedTriangle;	// Transformed triangle with 3 points keep as t_vertices
-    		for(int l = 0; l < 3; l++) {
-    			double v[4];	// actual vertex point vector [x, y, z, 1]
-    			v[0] = vertices[triangle.vertexIds[l]].x;
-    			v[1] = vertices[triangle.vertexIds[l]].y;
-    			v[2] = vertices[triangle.vertexIds[l]].z;
-    			v[3] = 1;
-    			//cout << "x: " << v[0] << ", y: " << v[1] << ", z: " << v[2] << ", w: " << v[3] << endl;
 
-    			// Transform this vertex point to transformed points 
-    			transformedTriangle.t_vertices[l].colorId = vertices[triangle.vertexIds[l]].colorId;
-    			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[l].t_points, M_total, v);
-    			//cout << transformedTriangle.t_vertices[l].t_points[0] << " " << transformedTriangle.t_vertices[l].t_points[1] << " " << transformedTriangle.t_vertices[l].t_points[2] << " "
-    			//<< transformedTriangle.t_vertices[l].t_points[3] << endl;
+    	std::vector<TransformedTriangle> transformedTriangles;
+    	if(backfaceCullingSetting) {
+    		// Backface culling, apply it before perspective divide
+    		ViewportTransformMatrix(cam, M_vp);
+	    	for(int j = 0; j < model.numberOfTriangles; j++) {
+	    		TransformedTriangle transformedTriangle;
+				// Actual triangle itself;
+				Triangle triangle = model.triangles[j];
+				for(int k = 0; k < 3; k++) {
+					double v[4];	// Actual vertex points [x, y, z, 1]
+	    			v[0] = vertices[triangle.vertexIds[k]].x;
+	    			v[1] = vertices[triangle.vertexIds[k]].y;
+	    			v[2] = vertices[triangle.vertexIds[k]].z;
+	    			v[3] = 1;
 
-    			PerspectiveDivide(transformedTriangle.t_vertices[l].t_points);	// Perform perspective divide to transformed points
-    			//cout << transformedTriangle.t_vertices[l].t_points[0] << " " << transformedTriangle.t_vertices[l].t_points[1] << " " << transformedTriangle.t_vertices[l].t_points[2] << " "
-    			//<< transformedTriangle.t_vertices[l].t_points[3] << endl;
-    			//cout << "**********************************************************************" << endl;
-    		}
-    		transformedTriangles.push_back(transformedTriangle);
+	    			// Transform actual vertex point to transformed point
+	    			transformedTriangle.t_vertices[k].colorId = vertices[triangle.vertexIds[k]].colorId;
+	    			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[k].t_points, M_total, v);
+				}
+
+				Vec3 v0, v1, v2, n, midPoint, v;
+				v0.x = transformedTriangle.t_vertices[0].t_points[0];
+				v0.y = transformedTriangle.t_vertices[0].t_points[1];
+				v0.z = transformedTriangle.t_vertices[0].t_points[2];
+				v1.x = transformedTriangle.t_vertices[1].t_points[0];
+				v1.y = transformedTriangle.t_vertices[1].t_points[1];
+				v1.z = transformedTriangle.t_vertices[1].t_points[2];
+				v2.x = transformedTriangle.t_vertices[2].t_points[0];
+				v2.y = transformedTriangle.t_vertices[2].t_points[1];
+				v2.z = transformedTriangle.t_vertices[2].t_points[2];
+
+				n = crossProductVec3(subtractVec3(v2, v0), subtractVec3(v1, v0)); 
+	 			n = normalizeVec3(n);
+
+	 			midPoint = multiplyVec3WithScalar(addVec3(addVec3(v0, v1), v2), (double)1/(double)3);
+	 			v = subtractVec3(midPoint, cam.v);
+	 			v = normalizeVec3(v);
+
+	 			if(dotProductVec3(n, v) < 0) {
+	 				for(int k = 0; k < 3; k++) {
+	 					//cout << "lolo" << endl;
+	 					//cout << transformedTriangle.t_vertices[k].t_points[4] << endl;
+	 					PerspectiveDivide(transformedTriangle.t_vertices[k].t_points);
+	 					_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[k].t_points, M_vp, transformedTriangle.t_vertices[k].t_points);
+	 				}
+	 				transformedTriangles.push_back(transformedTriangle);
+	 			}  
+	    	}
     	}
 
-    	ViewportTransformMatrix(cam, M_vp);
-    	// Perform viewport transformation against transformed vertex points
-    	for(int k = 0; k < transformedTriangles.size(); k++) {
-    		for(int l = 0; l < 3; l++) {
-    			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << " ";
-    			cout << transformedTriangles[k].t_vertices[l].t_points[0] << " " << transformedTriangles[k].t_vertices[l].t_points[1] << " " << transformedTriangles[k].t_vertices[l].t_points[2] << " "
-    			<< transformedTriangles[k].t_vertices[l].t_points[3] << endl;
-    			_multiplyMatrixWithVec4d(transformedTriangles[k].t_vertices[l].t_points, M_vp, transformedTriangles[k].t_vertices[l].t_points);
-    			//cout << transformedTriangles[k].t_vertices[l].t_points[0] << endl;
-    			cout << transformedTriangles[k].t_vertices[l].t_points[0] << " " << transformedTriangles[k].t_vertices[l].t_points[1] << " " << transformedTriangles[k].t_vertices[l].t_points[2] << " "
-    			<< transformedTriangles[k].t_vertices[l].t_points[3] << endl;
-    			cout << "**********************************************************************" << endl;
+    	else {
+	    	// Find viewport transformation matrix and multiply it transformed and performed perspective divide points
+	    	ViewportTransformMatrix(cam, M_vp);
+	    	for(int j = 0; j < model.numberOfTriangles; j++) {
+	    		Triangle triangle = model.triangles[j];		// Actual triangle without transforming
+	    		TransformedTriangle transformedTriangle;	// Transfortmed triangle, keep vertex points in t_vertices
+	    		for(int k = 0; k < 3; k++) {
+	    			double v[4];	// Actual vertex points [x, y, z, 1]
+	    			v[0] = vertices[triangle.vertexIds[k]].x;
+	    			v[1] = vertices[triangle.vertexIds[k]].y;
+	    			v[2] = vertices[triangle.vertexIds[k]].z;
+	    			v[3] = 1;
+
+	    			// Transform actual vertex point to transformed point
+	    			transformedTriangle.t_vertices[k].colorId = vertices[triangle.vertexIds[k]].colorId;
+	    			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[k].t_points, M_total, v);
+	    			PerspectiveDivide(transformedTriangle.t_vertices[k].t_points);
+	    			_multiplyMatrixWithVec4d(transformedTriangle.t_vertices[k].t_points, M_vp, transformedTriangle.t_vertices[k].t_points);
+	    		}
+	    		transformedTriangles.push_back(transformedTriangle);
+	    	}
+    	}
+
+    	if(model.type == 0) {
+    		for(int j = 0; j < transformedTriangles.size(); j++) {
+    			for(int k = 0; k < 3; k++) {
+    				double x0 = (transformedTriangles[j].t_vertices[k % 3].t_points[0]);
+    				double y0 = (transformedTriangles[j].t_vertices[k % 3].t_points[1]);
+    				double x1 = (transformedTriangles[j].t_vertices[(k+1) % 3].t_points[0]);
+    				double y1 = (transformedTriangles[j].t_vertices[(k+1) % 3].t_points[1]);
+    				Color c0  = colors[transformedTriangles[j].t_vertices[k % 3].colorId];
+    				Color c1  = colors[transformedTriangles[j].t_vertices[(k+1) % 3].colorId]; 
+    				LineRasterization(x0, y0, x1, y1, c0, c1);
+    			}
+    		}
+    	}
+    	// Else model type = 1: solid
+    	else {
+    		for(int j = 0; j < transformedTriangles.size(); j++) {
+    			std::pair<double, double> triangle[3];
+    			Color color[3];
+    			for(int k = 0; k < 3; k++) {
+    				triangle[k].first = transformedTriangles[j].t_vertices[k].t_points[0];	// x coordinate of the vertex
+    				triangle[k].second = transformedTriangles[j].t_vertices[k].t_points[1];	// y coordinate of the vertex
+    				color[k] = colors[transformedTriangles[j].t_vertices[k].colorId];		// color of the vertex
+    			}
+    			TriangleRasterization(triangle, color);
     		}
     	}
     }
-
-    for(int i = 0; i < transformedTriangles.size(); i++) {
-    	for(int j = 0; j < 3; j++) {
-    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].r = colors[transformedTriangles[i].t_vertices[j].colorId].r; 
-    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].g = colors[transformedTriangles[i].t_vertices[j].colorId].g;
-    		image[int(transformedTriangles[i].t_vertices[j].t_points[0])][int(transformedTriangles[i].t_vertices[j].t_points[1])].b = colors[transformedTriangles[i].t_vertices[j].colorId].b;
-    	}
-    }	
-    
-    for(int i = 0; i < transformedTriangles.size(); i++) {
-    	cout << "Triangle: " << i+1 << endl;
-    	for(int j = 0; j < 3; j++) {
-    		cout << "\t";
-    		cout << "x: " << transformedTriangles[i].t_vertices[j].t_points[0];
-    		cout << ", y: " << transformedTriangles[i].t_vertices[j].t_points[1]; 
-    		cout << ", z: " << transformedTriangles[i].t_vertices[j].t_points[2];
-    		cout << ", w: " << transformedTriangles[i].t_vertices[j].t_points[3];
-
-    	}
-    	cout << "\n";
-    }
-    cout << "****************************************************************************" << endl;
-	
 }
-
 
 int main(int argc, char **argv) {
     int i, j;
