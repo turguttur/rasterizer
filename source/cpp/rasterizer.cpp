@@ -304,8 +304,6 @@ void EqualizeMatrix(double src[4][4], double dst[4][4]) {
 // ##########################################################################################################################################
 // ##########################################################################################################################################
 
-// 2.0d yerine double() kullanulabilir
-
 
 // f(x,y) = x(y0 - y1) + y(x1 - x0) + x0y1 - y0x1
 
@@ -381,26 +379,6 @@ void TriangleRasterization(std::pair<double, double> vertex[3], Color color[3]) 
 			maxy = vertex[i].second;
 	}
 
-	/*
-	cout << "v0: (" << vertex[0].first << ", " << vertex[0].second << ")" << endl;
-	cout << "v1: (" << vertex[1].first << ", " << vertex[1].second << ")" << endl;
-	cout << "v2: (" << vertex[2].first << ", " << vertex[2].second << ")" << endl;
-	cout << "minx: " << minx << " maxx: " << maxx << " miny: " << miny << " maxy: " << maxy << endl; 
-	cout << "------------------------------------------------------------------------------------" << endl;
-	
-	double minx = min(vertex[0].first, vertex[1].first);
-	minx = min(minx, vertex[2].first);
-	double maxx = max(vertex[0].first, vertex[1].first);
-	maxx = max(maxx, vertex[2].first);
-	double miny = min(vertex[0].second, vertex[1].second);
-	miny = min(miny, vertex[2].second);
-	double maxy = max(vertex[0].second, vertex[1].second);
-	maxy = max(maxy, vertex[2].second);
-	*/
-	//cout << "xmin: " << minx << " xmax: " << maxx << " ymin: " << miny << " ymax: " << maxy << endl;
- 	// DOUBLE İNT FALAN DÜZELT
-
-	double epsilon = 1e-10;
 	int x0 = int(vertex[0].first);
 	int y0 = int(vertex[0].second);
 	int x1 = int(vertex[1].first);
