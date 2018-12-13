@@ -155,9 +155,9 @@ void ModelTransformationMatrix(Translation t, double matrix[4][4]) {
 void ModelTransformationMatrix(Rotation r, double matrix[4][4]) {
 	double uvals[3];
 	double vvals[3];
-	Vec3 u;					// 
-	Vec3 v;					//
-	Vec3 w;					// 
+	Vec3 u;					// Orthonormal vector u
+	Vec3 v;					// Orthonormal vector v
+	Vec3 w;					// Orthonormal vector w
 	double M[4][4];			// Orthonormal matrix uvw: M
 	double _M[4][4];		// Inverse of M
 	double Rx_theta[4][4];	// Rotation around x axis
@@ -361,7 +361,6 @@ void LineRasterization(double x0, double y0, double x1, double y1, Color c0, Col
 
 void TriangleRasterization(std::pair<double, double> vertex[3], Color color[3]) {
 	// pairs first is x coordinate, and the second is y coordinate
-
 	// We need to find bounding box first
 	
 	double minx = std::numeric_limits<double>::max();
@@ -393,18 +392,14 @@ void TriangleRasterization(std::pair<double, double> vertex[3], Color color[3]) 
 	Color c;
 	for(int y = int(miny); y <= int(maxy); y++) {
 		for(int x = int(minx); x <= int(maxx); x++) {
-			//cout << "x: " << x << ", y: " << y << endl;
 			alpha = double((x*(y1-y2))+(y*(x2-x1))+(x1*y2)-(y1*x2)) /
 					double((x0*(y1-y2))+(y0*(x2-x1))+(x1*y2)-(y1*x2));
 			beta  = double((x*(y2-y0))+(y*(x0-x2))+(x2*y0)-(y2*x0)) /
 					double((x1*(y2-y0))+(y1*(x0-x2))+(x2*y0)-(y2*x0));
 			gamma = double((x*(y0-y1))+(y*(x1-x0))+(x0*y1)-(y0*x1)) /
 					double((x2*(y0-y1))+(y2*(x1-x0))+(x0*y1)-(y0*x1));
-			//cout << "bary start:" << endl,
-			//cout << alpha << " " <<  beta << " "  << gamma << endl;
-			//cout << "bary end" << endl;
+
 			if(alpha >= 0 && beta >= 0 && gamma >= 0) {
-				//cout << alpha << " -- " << beta << " -- " << gamma << endl;
 				c.r = (alpha * c0.r) + (beta * c1.r) + (gamma * c2.r);
 				c.g = (alpha * c0.g) + (beta * c1.g) + (gamma * c2.g);
 				c.b = (alpha * c0.b) + (beta * c1.b) + (gamma * c2.b);
